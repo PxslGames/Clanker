@@ -33,7 +33,6 @@ cooldowns = {}
 
 intents = discord.Intents.default()
 intents.guilds = True
-intents.message_content = True
 
 class Clanker(commands.Bot):
     def __init__(self):
@@ -42,6 +41,8 @@ class Clanker(commands.Bot):
             intents=intents
         )
         self.dbl = None
+        self.active_users = {}
+        self.peak_ccu = 0
 
     async def setup_hook(self):
         print("[BOOT] Loading cogs...")
@@ -156,12 +157,27 @@ async def on_ready():
 @bot.event
 async def on_interaction(interaction: discord.Interaction):
     if interaction.type == discord.InteractionType.application_command:
+        now = time.time()
+
+        bot.active_users[interaction.user.id] = now
+
+        expired = [
+            uid
+            for uid, last_seen in bot.active_users.items()
+            if now - last_seen > 300
+        ]
+
+        for uid in expired:
+            del bot.active_users[uid]
+
+        bot.peak_ccu = max(bot.peak_ccu, len(bot.active_users))
+
         cmd = interaction.data.get("name")
         options = interaction.data.get("options", [])
 
-        args = " ".join([opt["value"] for opt in options]) if options else ""
+        args = " ".join(str(opt["value"]) for opt in options) if options else ""
 
-        print(f"[command log] @{interaction.user}: {cmd} {args}")
+        print(f"[COMMAND LOG] @{interaction.user}: {cmd} {args}")
 
 class WelcomeView(discord.ui.View):
     def __init__(self):
