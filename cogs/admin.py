@@ -5,6 +5,7 @@ from discord.ext import commands
 import discord
 import json
 import math
+import time
 
 def owner_check():
     async def predicate(interaction: Interaction):
@@ -358,6 +359,39 @@ class Admin(commands.Cog):
             view=ServerView(),
             ephemeral=True
         )
+    
+    @app_commands.command(name="ccu", description="(OWNER/ADMIN) View current CCU")
+    @admin_check()
+    async def ccu(self, interaction: Interaction):
+        now = time.time()
+
+        expired = [
+            uid
+            for uid, last_seen in self.bot.active_users.items()
+            if now - last_seen > 300
+        ]
+
+        for uid in expired:
+            del self.bot.active_users[uid]
+
+        embed = discord.Embed(
+            title="📊 Current CCU",
+            colour=discord.Colour.blurple()
+        )
+
+        embed.add_field(
+            name="Current",
+            value=f"**{len(self.bot.active_users)}** users",
+            inline=True
+        )
+
+        embed.add_field(
+            name="Peak Since Restart",
+            value=f"**{self.bot.peak_ccu}** users",
+            inline=True
+        )
+
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(Admin(bot))
